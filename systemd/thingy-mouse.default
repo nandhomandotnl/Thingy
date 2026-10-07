@@ -1,0 +1,5 @@
+# Extra options for thingy-mouse, see: thingy-mouse --help
+# Examples:
+#   THINGY_MOUSE_ARGS="--address E1:23:45:67:89:AB --sensitivity 15"
+#   THINGY_MOUSE_ARGS="--invert-x"
+THINGY_MOUSE_ARGS=""

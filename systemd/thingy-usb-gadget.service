@@ -1,0 +1,11 @@
+[Unit]
+Description=Raspberry Pi USB HID mouse gadget for thingy-mouse
+After=systemd-modules-load.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/thingy-mouse/usb_gadget.sh
+
+[Install]
+WantedBy=multi-user.target

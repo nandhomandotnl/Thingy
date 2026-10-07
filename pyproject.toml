@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thingy-mouse"
+version = "0.1.0"
+description = "Use a Nordic Thingy:52 as an air mouse via a Raspberry Pi (USB HID gadget)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["bleak>=0.21"]
+
+[project.optional-dependencies]
+uinput = ["evdev>=1.6"]
+test = ["pytest"]
+
+[project.scripts]
+thingy-mouse = "thingy_mouse.__main__:main"
+
+[tool.setuptools]
+packages = ["thingy_mouse"]

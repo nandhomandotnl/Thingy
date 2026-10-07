@@ -1,0 +1,13 @@
+[Unit]
+Description=Nordic Thingy:52 air mouse
+After=bluetooth.service thingy-usb-gadget.service
+Requires=bluetooth.service thingy-usb-gadget.service
+
+[Service]
+EnvironmentFile=-/etc/default/thingy-mouse
+ExecStart=/opt/thingy-mouse/venv/bin/thingy-mouse $THINGY_MOUSE_ARGS
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
