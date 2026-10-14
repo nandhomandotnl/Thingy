@@ -1,4 +1,5 @@
-"""Mouse outputs: USB HID gadget (Pi -> laptop), uinput (local test) and print (debug)."""
+"""Mouse outputs: USB HID gadget (Pi -> laptop), desktop (directly on this computer),
+uinput (Linux virtual mouse) and print (debug)."""
 
 import errno
 import logging
@@ -127,6 +128,31 @@ class UinputMouse(MouseOutput):
         self.ui.close()
 
 
+class DesktopMouse(MouseOutput):
+    """Moves the real cursor of this computer (Windows, macOS, Linux); no Pi needed."""
+
+    def __init__(self):
+        super().__init__()
+        from pynput.mouse import Button, Controller
+
+        self.ctl = Controller()
+        self._map = {BUTTON_LEFT: Button.left, BUTTON_RIGHT: Button.right, BUTTON_MIDDLE: Button.middle}
+        self._sent_buttons = 0
+
+    def _send(self, dx, dy, wheel):
+        for bit, button in self._map.items():
+            if (self.buttons ^ self._sent_buttons) & bit:
+                (self.ctl.press if self.buttons & bit else self.ctl.release)(button)
+        self._sent_buttons = self.buttons
+        if dx or dy:
+            self.ctl.move(dx, dy)
+        if wheel:
+            self.ctl.scroll(0, wheel)
+
+    def close(self):
+        self.release_all()
+
+
 class PrintMouse(MouseOutput):
     """Logs what would be sent; for trying things out without USB."""
 
@@ -139,6 +165,8 @@ def create_output(kind: str, hid_path: str = "/dev/hidg0") -> MouseOutput:
         return HidGadgetMouse(hid_path)
     if kind == "uinput":
         return UinputMouse()
+    if kind == "desktop":
+        return DesktopMouse()
     if kind == "print":
         return PrintMouse()
     raise ValueError(f"unknown output {kind!r}")

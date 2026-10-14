@@ -31,3 +31,38 @@ def test_press_release_and_drag():
     m.release(BUTTON_LEFT)
     m.move(0, 0)  # no-op
     assert m.sent == [(1, 0, 0), (1, 4, 0), (0, 0, 0)]
+
+
+def test_desktop_mouse_with_fake_pynput(monkeypatch):
+    import sys
+    import types
+
+    calls = []
+
+    class Controller:
+        def press(self, b):
+            calls.append(("press", b))
+
+        def release(self, b):
+            calls.append(("release", b))
+
+        def move(self, dx, dy):
+            calls.append(("move", dx, dy))
+
+        def scroll(self, x, y):
+            calls.append(("scroll", y))
+
+    mod = types.ModuleType("pynput.mouse")
+    mod.Controller = Controller
+    mod.Button = types.SimpleNamespace(left="L", right="R", middle="M")
+    monkeypatch.setitem(sys.modules, "pynput", types.ModuleType("pynput"))
+    monkeypatch.setitem(sys.modules, "pynput.mouse", mod)
+
+    from thingy_mouse.mouse import BUTTON_RIGHT, create_output
+
+    m = create_output("desktop")
+    m.press(BUTTON_LEFT)
+    m.move(3, -2)
+    m.release(BUTTON_LEFT)
+    m.click(BUTTON_RIGHT)
+    assert calls == [("press", "L"), ("move", 3, -2), ("release", "L"), ("press", "R"), ("release", "R")]

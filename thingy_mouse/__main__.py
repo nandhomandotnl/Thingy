@@ -14,8 +14,9 @@ def parse_args(argv=None):
         description="Use a Nordic Thingy:52 as an air mouse via a Raspberry Pi.",
     )
     p.add_argument("--address", help="Bluetooth address of the Thingy (default: first one found)")
-    p.add_argument("--output", choices=["hid", "uinput", "print"], default="hid",
-                   help="hid = USB mouse for the laptop (default), uinput = mouse on the Pi itself, print = debug")
+    p.add_argument("--output", choices=["hid", "desktop", "uinput", "print"], default="hid",
+                   help="hid = Pi acts as USB mouse for the laptop (default), desktop = move the cursor of "
+                        "this computer directly (no Pi), uinput = Linux virtual mouse, print = debug")
     p.add_argument("--hid-device", default="/dev/hidg0")
     p.add_argument("--rate", type=int, default=100, help="motion sample rate in Hz (5-200, default 100)")
     p.add_argument("--sensitivity", type=float, default=d.sensitivity, help="counts per degree")

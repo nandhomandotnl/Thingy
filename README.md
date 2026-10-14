@@ -26,7 +26,27 @@ LED-kleuren:
 - **groen**: actief
 - **blauw ademend**: gepauzeerd
 
-## Wat heb je nodig
+## Snel proberen zonder Pi (direct op je laptop)
+
+Heeft je laptop Bluetooth, dan kan hij ook zelf met de Thingy praten. Dan is er geen Pi nodig;
+de app beweegt direct je eigen cursor. Werkt op Windows, macOS en Linux (Python 3.9+ nodig).
+
+```bash
+git clone https://github.com/nandhomandotnl/Thingy.git
+cd Thingy
+python -m pip install ".[desktop]"
+python -m thingy_mouse --output desktop
+```
+
+- Zet de Thingy aan en zorg dat hij **niet** verbonden is met de Thingy-app op je telefoon.
+  Koppel hem ook **niet** via de Bluetooth-instellingen van je laptop; de app maakt zelf verbinding.
+- Leg de Thingy stil tot de LED groen wordt.
+- **macOS**: geef je terminal toegang onder *Systeeminstellingen → Privacy en beveiliging →
+  Toegankelijkheid* (muis besturen) en *Bluetooth*.
+- Stoppen: `Ctrl+C` in de terminal. Tip: tik drie keer op de Thingy om de cursor te pauzeren.
+- Eerst kijken of het werkt zonder dat je cursor wegschiet: `python -m thingy_mouse --output print -v`.
+
+## Wat heb je nodig (met Pi)
 
 - Nordic Thingy:52 met de standaard firmware
 - Een Raspberry Pi **met USB-OTG**: Pi Zero W / **Pi Zero 2 W** (aanbevolen), Pi 4 of Pi 5.
@@ -80,7 +100,7 @@ THINGY_MOUSE_ARGS="--sensitivity 15 --address E1:23:45:67:89:AB"
 | `--x-axis` / `--y-axis`   | z / x     | Welke gyro-as de cursor horizontaal/verticaal beweegt       |
 | `--invert-x` / `--no-invert-x` (idem y) | aan | Richting omdraaien                              |
 | `--click-freeze-ms`       | 150       | Cursor kort stilzetten bij klikken zodat je niet mis klikt  |
-| `--output`                | hid       | `hid` = USB-muis, `uinput` = muis op de Pi zelf, `print` = debug |
+| `--output`                | hid       | `hid` = Pi als USB-muis, `desktop` = direct op deze computer, `uinput` = Linux virtuele muis, `print` = debug |
 
 **Beweegt de cursor de verkeerde kant op?** Gebruik `--no-invert-x` / `--no-invert-y`.
 **Houd je de Thingy anders vast** (bijv. rechtop)? Probeer een andere `--x-axis` / `--y-axis`
