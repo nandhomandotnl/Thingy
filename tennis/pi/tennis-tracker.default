@@ -1,0 +1,4 @@
+# Opties voor tennis-tracker op deze Pi (zie: tennis-tracker run --help).
+# Voorbeeld voor Pi 1 met de sensor van Jan, slagen doorsturen naar de laptop:
+#   TENNIS_ARGS="--sensor Tennis-AB12 --player Jan --forward 192.168.1.20:5005"
+TENNIS_ARGS="--count 1"

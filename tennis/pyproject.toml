@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tennis-tracker"
+version = "0.1.0"
+description = "Analyse tennis strokes from Thingy:53 racket sensors (laptop or Raspberry Pi)"
+requires-python = ">=3.9"
+dependencies = ["bleak>=0.21"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+tennis-tracker = "tennis_tracker.cli:main"
+
+[tool.setuptools]
+packages = ["tennis_tracker"]

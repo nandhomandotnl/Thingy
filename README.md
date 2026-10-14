@@ -5,6 +5,9 @@ Gebruik een Nordic Thingy als "air mouse" voor je laptop.
 > **Heb je een Thingy:53?** Gebruik dan de firmware in [`firmware/thingy53`](firmware/thingy53/README.md):
 > de Thingy:53 wordt daarmee zelf een Bluetooth-muis, zonder Pi of extra software.
 >
+> **Tennisslagen analyseren** met Thingy:53's op het racket (laptop of Raspberry Pi):
+> zie [`tennis/`](tennis/README.md).
+>
 > De rest van deze pagina gaat over de **Thingy:52**, die met de standaard firmware via een
 > Raspberry Pi (of direct vanaf je laptop) als muis werkt.
 

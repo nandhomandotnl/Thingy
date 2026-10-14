@@ -1,0 +1,15 @@
+[Unit]
+Description=Tennis stroke tracker (Thingy:53 racket sensor)
+After=bluetooth.service network-online.target
+Wants=network-online.target
+Requires=bluetooth.service
+
+[Service]
+EnvironmentFile=/etc/default/tennis-tracker
+WorkingDirectory=/var/lib/tennis-tracker
+ExecStart=/opt/tennis-tracker/venv/bin/tennis-tracker run $TENNIS_ARGS
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
