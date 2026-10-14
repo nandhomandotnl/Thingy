@@ -1,0 +1,4 @@
+/* The BMI270 IMU (gyroscope + accelerometer) is disabled in the board files; enable it. */
+&bmi270 {
+	status = "okay";
+};

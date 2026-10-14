@@ -1,7 +1,12 @@
-# Thingy:52 als muis
+# Thingy als muis
 
-Gebruik een [Nordic Thingy:52](https://www.nordicsemi.com/Products/Development-hardware/Nordic-Thingy-52)
-als "air mouse" voor je laptop, met een Raspberry Pi ertussen.
+Gebruik een Nordic Thingy als "air mouse" voor je laptop.
+
+> **Heb je een Thingy:53?** Gebruik dan de firmware in [`firmware/thingy53`](firmware/thingy53/README.md):
+> de Thingy:53 wordt daarmee zelf een Bluetooth-muis, zonder Pi of extra software.
+>
+> De rest van deze pagina gaat over de **Thingy:52**, die met de standaard firmware via een
+> Raspberry Pi (of direct vanaf je laptop) als muis werkt.
 
 ```
  Thingy:52  ──Bluetooth LE──▶  Raspberry Pi  ──USB-kabel (Pi = USB-muis)──▶  Laptop
