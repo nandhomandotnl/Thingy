@@ -63,6 +63,20 @@ klittenband of tape, en altijd op dezelfde plek en in dezelfde richting. Als hij
    ```
    Stoppen met **Ctrl+C**; dan krijg je een samenvatting per speler en slagtype.
 
+### Live dashboard
+
+![Dashboard](dashboard.png)
+
+Bij `tennis-tracker run` gaat automatisch je browser open met het **dashboard**
+(http://localhost:8000). Daar zie je per racket:
+- live grafieken van de draaisnelheid en versnelling (laatste 6 seconden), met elke slag gemarkeerd
+- de laatste slag groot in beeld: snelheid, type, raak of lucht
+- aantal slagen, gemiddelde en maximale snelheid, raakpercentage
+- een staafgrafiek met de snelheid van elke slag (per speler een kleur) en tabellen met alle slagen
+
+Het werkt zonder internet. Beweeg met de muis over een grafiek voor de precieze waarde.
+Knop rechtsboven: licht/donker. Zonder dashboard: `--no-dashboard`.
+
 Zonder Thingy uitproberen kan ook: `tennis-tracker run --simulate --count 2`.
 
 ### Wat wordt er opgeslagen?
@@ -101,7 +115,10 @@ Op de **laptop** verzamel je de slagen van beide Pi's:
 tennis-tracker collect
 ```
 
-Alle slagen komen live binnen en worden opgeslagen in `sessies/alle_slagen.csv`.
+Alle slagen komen live binnen, in het dashboard (http://localhost:8000) en in `sessies/alle_slagen.csv`.
+
+Wil je de live grafieken van een Pi zelf zien, zet dan op die Pi
+`--no-browser --dashboard-host 0.0.0.0` in `TENNIS_ARGS` en open op je laptop `http://<ip-van-de-pi>:8000`.
 Elke Pi bewaart daarnaast zijn eigen volledige sessie in `/var/lib/tennis-tracker/sessies/`.
 
 ## Goed om te weten
@@ -120,6 +137,7 @@ Elke Pi bewaart daarnaast zijn eigen volledige sessie in `/var/lib/tennis-tracke
 - `tennis_tracker/sources.py`: echte sensor (bleak) en simulator
 - `tennis_tracker/detect.py`: slagherkenning en metingen
 - `tennis_tracker/classify.py`: slagtype leren en herkennen
+- `tennis_tracker/dashboard.py` + `dashboard.html`: live dashboard in de browser
 - `tennis_tracker/storage.py`, `report.py`, `forward.py`, `cli.py`
 - Firmware: `../firmware/thingy53_tennis/src/main.c`
 

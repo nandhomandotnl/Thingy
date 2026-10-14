@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List
 
-from . import protocol
+from . import dashboard, protocol
 from .classify import DEFAULT_KINDS, StrokeClassifier, calibration_path, load_for_sensor
 from .detect import DetectorSettings, Stroke, StrokeDetector
 from .forward import Forwarder, collect
@@ -69,11 +69,24 @@ def _format_stroke(row: Dict[str, object]) -> str:
 
 # ---------- run ----------
 
+def _start_dashboard(args, broadcaster: "dashboard.Broadcaster") -> None:
+    if args.no_dashboard:
+        return
+    url = dashboard.start(broadcaster, args.dashboard_host, args.dashboard_port)
+    print(f"Dashboard: {url}")
+    if not args.no_browser:
+        import webbrowser
+
+        webbrowser.open(url)
+
+
 async def cmd_run(args) -> None:
     session = Session(Path(args.out), save_raw=not args.no_raw)
     forwarder = Forwarder(args.forward) if args.forward else None
+    board = dashboard.Broadcaster()
     detectors: Dict[str, StrokeDetector] = {}
     classifiers: Dict[str, StrokeClassifier] = {}
+    thinners: Dict[str, dashboard.SampleThinner] = {}
     players: Dict[str, str] = {}
     stats: Dict[str, int] = {}
 
@@ -81,26 +94,34 @@ async def cmd_run(args) -> None:
         classifiers[stroke.sensor].apply(stroke)
         row = session.add_stroke(stroke, players[stroke.sensor])
         print(_format_stroke(row), flush=True)
+        board.publish({"type": "stroke", **row}, keep=True)
         if forwarder:
             forwarder.send(row)
 
     def on_samples(sensor, samples) -> None:
         stats[sensor] = stats.get(sensor, 0) + len(samples)
         session.add_samples(sensor, samples)
+        thinners[sensor].add(samples, args.rate)
         for s in samples:
             detectors[sensor].add(s)
 
     def on_marker(sensor, t) -> None:
         print(f"{dt.datetime.now():%H:%M:%S}  {players[sensor]:<10} --- markering (knop) ---", flush=True)
         session.add_marker(sensor, t)
+        board.publish({"type": "marker", "sensor": sensor, "t": t}, keep=True)
 
     sources = await _make_sources(args, on_samples, on_marker)
     for i, src in enumerate(sources):
         players[src.name] = args.player[i] if args.player and i < len(args.player) else src.name
         classifiers[src.name] = load_for_sensor(Path(args.calibration), src.name)
         detectors[src.name] = StrokeDetector(src.name, _detector_settings(args), on_stroke)
+        thinners[src.name] = dashboard.SampleThinner(board, src.name)
         state = "gekalibreerd" if classifiers[src.name].trained else "niet gekalibreerd (doe: tennis-tracker calibrate)"
         print(f"Sensor {src.name} -> speler {players[src.name]}, {state}")
+    board.set_hello(dashboard.hello_message(
+        {src.name: {"player": players[src.name], "calibrated": classifiers[src.name].trained} for src in sources},
+        f"Sessie {session.dir.name}"))
+    _start_dashboard(args, board)
     print(f"Sessie wordt opgeslagen in {session.dir}. Stoppen met Ctrl+C.\n")
 
     async def status():
@@ -185,7 +206,15 @@ async def cmd_identify(args) -> None:
 
 
 async def cmd_collect(args) -> None:
-    await collect(args.listen, Path(args.out), lambda row: print(_format_stroke(row), flush=True))
+    board = dashboard.Broadcaster()
+    board.set_hello(dashboard.hello_message({}, "Verzamelpunt: slagen van alle Pi's"))
+    _start_dashboard(args, board)
+
+    def on_row(row):
+        print(_format_stroke(row), flush=True)
+        board.publish({"type": "stroke", **row}, keep=True)
+
+    await collect(args.listen, Path(args.out), on_row)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -202,6 +231,13 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--calibration", default="kalibratie", help="map met kalibratiebestanden")
         sp.add_argument("--simulate", action="store_true", help="geen echte sensor; nep-slagen om te testen")
 
+    def dashboard_opts(sp):
+        sp.add_argument("--no-dashboard", action="store_true", help="geen live dashboard in de browser")
+        sp.add_argument("--no-browser", action="store_true", help="dashboard wel starten maar browser niet openen")
+        sp.add_argument("--dashboard-host", default="127.0.0.1",
+                        help="0.0.0.0 = ook bereikbaar vanaf andere apparaten (bv. de Pi bekijken vanaf je laptop)")
+        sp.add_argument("--dashboard-port", type=int, default=8000)
+
     sp = sub.add_parser("scan", help="zoek sensors in de buurt")
     sp.add_argument("--timeout", type=float, default=8.0)
 
@@ -211,6 +247,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--out", default="sessies", help="map voor de sessiebestanden")
     sp.add_argument("--no-raw", action="store_true", help="geen ruwe sensordata opslaan")
     sp.add_argument("--forward", help="stuur slagen door naar HOST:POORT (zie 'collect')")
+    dashboard_opts(sp)
 
     sp = sub.add_parser("calibrate", help="leer forehand/backhand/opslag herkennen")
     sensor_opts(sp, multi=False)
@@ -226,6 +263,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("collect", help="ontvang slagen van meerdere Pi's")
     sp.add_argument("--listen", default="0.0.0.0:5005")
     sp.add_argument("--out", default="sessies/alle_slagen.csv")
+    dashboard_opts(sp)
     return p
 
 

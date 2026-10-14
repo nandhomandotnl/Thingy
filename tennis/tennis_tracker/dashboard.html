@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tennis live</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --good: #0ca30c;
+  --good-text: #006300;
+  --critical: #d03b3b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface-1: #1a1a19;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --good: #0ca30c;
+    --good-text: #0ca30c;
+    --critical: #d03b3b;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface-1: #1a1a19;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --good: #0ca30c;
+  --good-text: #0ca30c;
+  --critical: #d03b3b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--page); color: var(--text-primary);
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+header {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--surface-1);
+}
+header h1 { font-size: 18px; margin: 0; font-weight: 650; }
+header .sub { color: var(--text-secondary); font-size: 13px; }
+header .spacer { flex: 1; }
+.theme-btn {
+  border: 1px solid var(--border); background: transparent; color: var(--text-secondary);
+  border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer;
+}
+main { padding: 20px 24px 40px; max-width: 1500px; margin: 0 auto; display: grid; gap: 20px; }
+.rackets { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr)); gap: 20px; }
+.card {
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px;
+  min-width: 0;
+}
+.card h2 { font-size: 15px; margin: 0 0 12px; font-weight: 650; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card h2 .key { width: 18px; height: 3px; border-radius: 2px; display: inline-block; }
+.card h2 .sensor { color: var(--text-muted); font-weight: 400; font-size: 13px; }
+.status { margin-left: auto; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+.status.live { color: var(--good-text); }
+.status.off { color: var(--text-muted); }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.tile { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.tile .label { color: var(--text-secondary); font-size: 12px; }
+.tile .value { font-size: 22px; font-weight: 650; }
+.tile .unit { font-size: 13px; color: var(--text-secondary); font-weight: 400; }
+.last {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  padding: 10px 0 6px; border-top: 1px solid var(--border); margin-bottom: 4px;
+}
+.last .big { font-size: 36px; font-weight: 700; }
+.last .kind { font-size: 18px; font-weight: 600; text-transform: capitalize; }
+.badge { font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.badge.hit { color: var(--good-text); }
+.badge.miss { color: var(--text-muted); }
+.chart-title { font-size: 12px; color: var(--text-secondary); margin: 10px 0 2px; }
+.chart { position: relative; }
+.chart canvas { display: block; width: 100%; height: 150px; touch-action: none; }
+.chart.tall canvas { height: 220px; }
+.tooltip {
+  position: absolute; pointer-events: none; display: none; z-index: 2;
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 8px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.12); white-space: nowrap;
+}
+.tooltip strong { font-size: 14px; color: var(--text-primary); }
+.tooltip .muted { color: var(--text-secondary); }
+.tooltip .line { display: inline-block; width: 12px; height: 2px; vertical-align: middle; margin-right: 6px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-weight: 500; color: var(--text-secondary); border-bottom: 1px solid var(--border); padding: 6px 8px; }
+td { padding: 6px 8px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+td.num, th.num { text-align: right; }
+.table-wrap { max-height: 360px; overflow: auto; }
+.empty { color: var(--text-muted); padding: 18px 0; text-align: center; }
+.bottom { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 20px; }
+.conn-banner { display: none; background: var(--critical); color: #fff; padding: 8px 24px; font-weight: 600; }
+@media (max-width: 600px) {
+  header, main { padding-left: 16px; padding-right: 16px; }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+</style>
+</head>
+<body>
+<div class="conn-banner" id="banner">Geen verbinding met tennis-tracker. Draait het programma nog?</div>
+<header>
+  <h1>🎾 Tennis live</h1>
+  <span class="sub" id="subtitle">Wachten op gegevens ...</span>
+  <span class="spacer"></span>
+  <button class="theme-btn" id="theme" type="button">Licht/donker</button>
+</header>
+<main>
+  <section class="rackets" id="rackets"></section>
+  <section class="card">
+    <h2>Snelheid per slag in km/h (laatste 40)</h2>
+    <div class="legend" id="bar-legend"></div>
+    <div class="chart tall"><canvas id="bars" tabindex="0" aria-label="Snelheid per slag in km/h"></canvas><div class="tooltip"></div></div>
+  </section>
+  <section class="bottom">
+    <div class="card">
+      <h2>Overzicht per slagtype</h2>
+      <div class="table-wrap"><table id="summary"><thead><tr>
+        <th>Speler</th><th>Slag</th><th class="num">Aantal</th><th class="num">Gem. km/h</th><th class="num">Max km/h</th><th class="num">Raak</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>Alle slagen</h2>
+      <div class="table-wrap"><table id="strokes"><thead><tr>
+        <th>Tijd</th><th>Speler</th><th>Slag</th><th class="num">km/h</th><th class="num">Piek °/s</th><th>Raak</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const WINDOW_S = 6;          // seconds of live data shown
+const KEEP_S = 10;
+const SERIES = ["--series-1", "--series-2"];
+
+const sensors = new Map();   // sensor -> state
+const strokes = [];          // all stroke rows (with .sensor)
+let title = "";
+
+// ---------- theme ----------
+const themeBtn = document.getElementById("theme");
+try { const t = localStorage.getItem("tennis-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+themeBtn.addEventListener("click", () => {
+  const dark = getComputedStyle(document.documentElement).colorScheme === "dark";
+  const next = dark ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("tennis-theme", next); } catch (e) {}
+});
+function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+// ---------- helpers ----------
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function niceScale(v, minMax) {
+  const target = Math.max(v, minMax) / 4;
+  const p = Math.pow(10, Math.floor(Math.log10(target)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * p).find(x => x >= target);
+  return { yMax: Math.ceil(Math.max(v, minMax) / step) * step, step };
+}
+function fmt(n, d = 0) { return Number(n).toLocaleString("nl-NL", { minimumFractionDigits: d, maximumFractionDigits: d }); }
+function kindLabel(k) { return k.charAt(0).toUpperCase() + k.slice(1); }
+
+function setupCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+
+function drawAxes(ctx, plot, yMax, yStep, xTicks) {
+  ctx.font = "11px system-ui, -apple-system, 'Segoe UI', sans-serif";
+  ctx.fillStyle = css("--text-muted");
+  ctx.strokeStyle = css("--grid");
+  ctx.lineWidth = 1;
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  for (let v = 0; v <= yMax + 1e-9; v += yStep) {
+    const y = Math.round(plot.y + plot.h - v / yMax * plot.h) + 0.5;
+    if (v > 0) { ctx.beginPath(); ctx.moveTo(plot.x, y); ctx.lineTo(plot.x + plot.w, y); ctx.stroke(); }
+    ctx.fillText(fmt(v, yStep < 1 ? 1 : 0), plot.x - 6, y);
+  }
+  ctx.strokeStyle = css("--axis");
+  ctx.beginPath(); ctx.moveTo(plot.x, plot.y + plot.h + 0.5); ctx.lineTo(plot.x + plot.w, plot.y + plot.h + 0.5); ctx.stroke();
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  for (const [x, label] of xTicks) ctx.fillText(label, x, plot.y + plot.h + 5);
+}
+
+// ---------- racket cards ----------
+function ensureSensor(name, info) {
+  if (sensors.has(name)) {
+    const s = sensors.get(name);
+    if (info) Object.assign(s.info, info);
+    s.dom.player.textContent = s.info.player;
+    return s;
+  }
+  const idx = sensors.size;
+  const s = {
+    name, idx, info: Object.assign({ player: name }, info || {}),
+    t: [], g: [], a: [], lastRecv: 0, markers: [],
+  };
+  const card = el("article", "card");
+  const h = el("h2");
+  const key = el("span", "key"); key.style.background = `var(${SERIES[idx % 2]})`;
+  const player = el("span", "", s.info.player);
+  const sensor = el("span", "sensor", name);
+  const status = el("span", "status off"); status.append(el("span", "dot"), el("span", "", "geen data"));
+  h.append(key, player, sensor, status);
+  card.append(h);
+
+  const tiles = el("div", "tiles");
+  const tile = (label, unit) => {
+    const t = el("div", "tile"); const row = el("div"); const v = el("span", "value", "–");
+    row.append(v); if (unit) row.append(el("span", "unit", " " + unit));
+    t.append(el("div", "label", label), row);
+    tiles.append(t); return v;
+  };
+  const count = tile("Slagen"), avg = tile("Gem. snelheid", "km/h"), max = tile("Max snelheid", "km/h"), hit = tile("Raak");
+  card.append(tiles);
+
+  const last = el("div", "last");
+  const lastBig = el("span", "big", "–");
+  const lastKind = el("span", "kind", "nog geen slag");
+  const lastBadge = el("span", "badge");
+  const lastPeak = el("span", "sensor");
+  last.append(lastBig, lastKind, lastBadge, lastPeak);
+  card.append(last);
+
+  const mkChart = (label, aria) => {
+    card.append(el("div", "chart-title", label));
+    const wrap = el("div", "chart");
+    const canvas = el("canvas"); canvas.tabIndex = 0; canvas.setAttribute("aria-label", aria);
+    const tip = el("div", "tooltip");
+    wrap.append(canvas, tip); card.append(wrap);
+    const chart = { canvas, tip, hoverX: null };
+    canvas.addEventListener("pointermove", e => { chart.hoverX = e.offsetX; });
+    canvas.addEventListener("pointerleave", () => { chart.hoverX = null; tip.style.display = "none"; });
+    return chart;
+  };
+  s.gyroChart = mkChart("Draaisnelheid racket (°/s), laatste 6 seconden", "Draaisnelheid live");
+  s.accChart = mkChart("Versnelling (g), laatste 6 seconden", "Versnelling live");
+
+  document.getElementById("rackets").append(card);
+  s.dom = { status, player, count, avg, max, hit, lastBig, lastKind, lastBadge, lastPeak };
+  sensors.set(name, s);
+  renderLegend();
+  return s;
+}
+
+function updateCard(s) {
+  const mine = strokes.filter(r => r.sensor === s.name);
+  s.dom.count.textContent = mine.length;
+  if (!mine.length) return;
+  const speeds = mine.map(r => +r.snelheid_kmh);
+  s.dom.avg.textContent = fmt(speeds.reduce((a, b) => a + b, 0) / speeds.length);
+  s.dom.max.textContent = fmt(Math.max(...speeds));
+  s.dom.hit.textContent = fmt(100 * mine.filter(r => +r.raak).length / mine.length) + "%";
+  const r = mine[mine.length - 1];
+  s.dom.lastBig.textContent = fmt(r.snelheid_kmh) + " km/h";
+  s.dom.lastKind.textContent = r.slag + (+r.zekerheid ? ` (${fmt(100 * r.zekerheid)}%)` : "");
+  s.dom.lastBadge.className = "badge " + (+r.raak ? "hit" : "miss");
+  s.dom.lastBadge.textContent = +r.raak ? "✓ raak" : "○ lucht";
+  s.dom.lastPeak.textContent = `piek ${fmt(r.piek_graden_per_s)} °/s` + (+r.boven_meetbereik ? " (boven meetbereik)" : "");
+}
+
+function drawLive(s, chart, values, minMax, unit, color, markers) {
+  const { ctx, w, h } = setupCanvas(chart.canvas);
+  const plot = { x: 52, y: 10, w: w - 60, h: h - 30 };
+  const tNow = s.t.length ? s.t[s.t.length - 1] : 0;
+  const x = t => plot.x + (1 - (tNow - t) / WINDOW_S) * plot.w;
+  let start = s.t.findIndex(t => tNow - t <= WINDOW_S);
+  if (start < 0) start = s.t.length;
+  let vmax = 0;
+  for (let i = start; i < values.length; i++) vmax = Math.max(vmax, values[i]);
+  const { yMax, step } = niceScale(vmax * 1.1, minMax);
+  const y = v => plot.y + plot.h - Math.min(v, yMax) / yMax * plot.h;
+  const ticks = [];
+  for (let k = WINDOW_S; k >= 0; k--) ticks.push([plot.x + (1 - k / WINDOW_S) * plot.w, k ? `-${k} s` : "nu"]);
+  drawAxes(ctx, plot, yMax, step, ticks);
+
+  // stroke markers: hairline + direct label with speed
+  ctx.font = "11px system-ui, -apple-system, 'Segoe UI', sans-serif";
+  for (const m of markers || []) {
+    if (tNow - m.t > WINDOW_S || m.t > tNow) continue;
+    const mx = Math.round(x(m.t)) + 0.5;
+    ctx.strokeStyle = css("--text-muted"); ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(mx, plot.y); ctx.lineTo(mx, plot.y + plot.h); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = css("--text-secondary"); ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText(m.label, Math.min(mx + 4, plot.x + plot.w - 60), plot.y);
+  }
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(plot.x, plot.y - 2, plot.w, plot.h + 4); ctx.clip();
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = "round";
+  ctx.beginPath();
+  for (let i = start; i < values.length; i++) {
+    const px = x(s.t[i]), py = y(values[i]);
+    if (i === start) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  // crosshair + tooltip
+  const tip = chart.tip;
+  if (chart.hoverX === null || start >= values.length) { tip.style.display = "none"; return; }
+  const tHover = tNow - (1 - (chart.hoverX - plot.x) / plot.w) * WINDOW_S;
+  let best = start;
+  for (let i = start; i < s.t.length; i++) if (Math.abs(s.t[i] - tHover) < Math.abs(s.t[best] - tHover)) best = i;
+  const cx = Math.round(x(s.t[best])) + 0.5;
+  ctx.strokeStyle = css("--text-secondary"); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx, plot.y); ctx.lineTo(cx, plot.y + plot.h); ctx.stroke();
+  ctx.fillStyle = color; ctx.strokeStyle = css("--surface-1"); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, y(values[best]), 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  tip.replaceChildren();
+  const line = el("span", "line"); line.style.background = color;
+  tip.append(line, el("strong", "", `${fmt(values[best], unit === "g" ? 1 : 0)} ${unit}`),
+    el("span", "muted", `  ${s.info.player} · ${fmt(tNow - s.t[best], 1)} s geleden`));
+  tip.style.display = "block";
+  tip.style.left = Math.min(cx + 10, w - tip.offsetWidth - 4) + "px";
+  tip.style.top = "6px";
+}
+
+// ---------- speed bars ----------
+const bars = { canvas: document.getElementById("bars"), hover: null, rects: [] };
+bars.tip = bars.canvas.nextElementSibling;
+bars.canvas.addEventListener("pointermove", e => { bars.hover = { x: e.offsetX, y: e.offsetY }; });
+bars.canvas.addEventListener("pointerleave", () => { bars.hover = null; bars.tip.style.display = "none"; });
+
+function renderLegend() {
+  const lg = document.getElementById("bar-legend");
+  lg.replaceChildren();
+  for (const s of sensors.values()) {
+    const sp = el("span"); const i = el("i"); i.style.background = `var(${SERIES[s.idx % 2]})`;
+    sp.append(i, document.createTextNode(s.info.player)); lg.append(sp);
+  }
+}
+
+function seriesColor(sensor) {
+  const s = sensors.get(sensor);
+  return css(SERIES[(s ? s.idx : 0) % 2]);
+}
+
+function drawBars() {
+  const { ctx, w, h } = setupCanvas(bars.canvas);
+  const plot = { x: 52, y: 10, w: w - 60, h: h - 30 };
+  const recent = strokes.slice(-40);
+  const { yMax, step } = niceScale(Math.max(...recent.map(r => +r.snelheid_kmh), 0) * 1.1, 50);
+  const n = Math.max(recent.length, 10);
+  const slot = plot.w / n;
+  const bw = Math.max(3, Math.min(28, slot - 2));
+  const ticks = recent.map((r, i) => [plot.x + slot * i + slot / 2, (i % 5 === 4 || recent.length < 10) ? String(strokes.length - recent.length + i + 1) : ""]);
+  drawAxes(ctx, plot, yMax, step, ticks);
+  if (!recent.length) {
+    ctx.fillStyle = css("--text-muted"); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = "13px system-ui, -apple-system, 'Segoe UI', sans-serif";
+    ctx.fillText("Nog geen slagen", plot.x + plot.w / 2, plot.y + plot.h / 2);
+    return;
+  }
+  bars.rects = [];
+  recent.forEach((r, i) => {
+    const bx = plot.x + slot * i + (slot - bw) / 2;
+    const bh = Math.max(2, +r.snelheid_kmh / yMax * plot.h);
+    const by = plot.y + plot.h - bh;
+    const hovered = bars.hover && bars.hover.x >= plot.x + slot * i && bars.hover.x < plot.x + slot * (i + 1);
+    ctx.fillStyle = seriesColor(r.sensor);
+    ctx.globalAlpha = bars.hover && !hovered ? 0.55 : 1;
+    ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, [4, 4, 0, 0]); ctx.fill();
+    ctx.globalAlpha = 1;
+    if (hovered) bars.rects = [{ r, i, bx, by, bw }];
+  });
+  // direct label on the fastest bar only
+  let best = 0; recent.forEach((r, i) => { if (+r.snelheid_kmh > +recent[best].snelheid_kmh) best = i; });
+  ctx.fillStyle = css("--text-secondary"); ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+  ctx.font = "11px system-ui, -apple-system, 'Segoe UI', sans-serif";
+  ctx.fillText(fmt(recent[best].snelheid_kmh), plot.x + slot * best + slot / 2, plot.y + plot.h - +recent[best].snelheid_kmh / yMax * plot.h - 3);
+
+  const tip = bars.tip;
+  if (!bars.rects.length) { tip.style.display = "none"; return; }
+  const { r, i, bx, by } = bars.rects[0];
+  tip.replaceChildren();
+  const line = el("span", "line"); line.style.background = seriesColor(r.sensor);
+  tip.append(line, el("strong", "", `${fmt(r.snelheid_kmh)} km/h`),
+    el("span", "muted", `  slag ${strokes.length - recent.length + i + 1} · ${r.speler} · ${r.slag} · ${+r.raak ? "raak" : "lucht"}`));
+  tip.style.display = "block";
+  tip.style.left = Math.max(4, Math.min(bx - 40, w - tip.offsetWidth - 4)) + "px";
+  tip.style.top = Math.max(0, by - 40) + "px";
+}
+
+// ---------- tables ----------
+function renderTables() {
+  const tb = document.querySelector("#strokes tbody");
+  tb.replaceChildren();
+  if (!strokes.length) { const tr = el("tr"); const td = el("td", "empty", "Nog geen slagen"); td.colSpan = 6; tr.append(td); tb.append(tr); }
+  for (const r of strokes.slice(-100).reverse()) {
+    const tr = el("tr");
+    tr.append(el("td", "", (r.tijd || "").slice(11, 19)), el("td", "", r.speler), el("td", "", kindLabel(r.slag)),
+      el("td", "num", fmt(r.snelheid_kmh)), el("td", "num", fmt(r.piek_graden_per_s)), el("td", "", +r.raak ? "✓ raak" : "○ lucht"));
+    tb.append(tr);
+  }
+  const groups = new Map();
+  for (const r of strokes) {
+    const k = r.speler + "\u0000" + r.slag;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(r);
+  }
+  const sb = document.querySelector("#summary tbody");
+  sb.replaceChildren();
+  if (!groups.size) { const tr = el("tr"); const td = el("td", "empty", "Nog geen slagen"); td.colSpan = 6; tr.append(td); sb.append(tr); }
+  for (const [k, rs] of [...groups].sort()) {
+    const [player, kind] = k.split("\u0000");
+    const sp = rs.map(r => +r.snelheid_kmh);
+    const tr = el("tr");
+    tr.append(el("td", "", player), el("td", "", kindLabel(kind)), el("td", "num", rs.length),
+      el("td", "num", fmt(sp.reduce((a, b) => a + b, 0) / sp.length)), el("td", "num", fmt(Math.max(...sp))),
+      el("td", "num", fmt(100 * rs.filter(r => +r.raak).length / rs.length) + "%"));
+    sb.append(tr);
+  }
+}
+
+// ---------- data ----------
+function onMessage(msg) {
+  if (msg.type === "hello") {
+    title = msg.title || "";
+    for (const info of msg.sensors) ensureSensor(info.sensor, info);
+    document.getElementById("subtitle").textContent = title;
+  } else if (msg.type === "samples") {
+    const s = ensureSensor(msg.sensor);
+    s.t.push(...msg.t); s.g.push(...msg.g); s.a.push(...msg.a);
+    const tNow = s.t[s.t.length - 1];
+    let cut = 0; while (cut < s.t.length && tNow - s.t[cut] > KEEP_S) cut++;
+    if (cut) { s.t.splice(0, cut); s.g.splice(0, cut); s.a.splice(0, cut); }
+    s.lastRecv = performance.now();
+  } else if (msg.type === "stroke") {
+    const s = ensureSensor(msg.sensor, msg.speler ? { player: msg.speler } : null);
+    strokes.push(msg);
+    if (msg.t_sensor_s !== undefined) s.markers.push({ t: +msg.t_sensor_s, label: `${fmt(msg.snelheid_kmh)} km/h` });
+    if (s.markers.length > 20) s.markers.shift();
+    updateCard(s); renderTables();
+  } else if (msg.type === "marker") {
+    const s = ensureSensor(msg.sensor);
+    s.markers.push({ t: msg.t, label: "markering" });
+  }
+}
+
+function connect() {
+  const es = new EventSource("/events");
+  const banner = document.getElementById("banner");
+  es.onopen = () => { banner.style.display = "none"; };
+  es.onmessage = e => onMessage(JSON.parse(e.data));
+  es.onerror = () => { banner.style.display = "block"; };
+}
+
+function frame() {
+  const now = performance.now();
+  for (const s of sensors.values()) {
+    const live = now - s.lastRecv < 2000;
+    s.dom.status.className = "status " + (live ? "live" : "off");
+    s.dom.status.lastChild.textContent = live ? "live" : "geen data";
+    const color = css(SERIES[s.idx % 2]);
+    drawLive(s, s.gyroChart, s.g, 400, "°/s", color, s.markers);
+    drawLive(s, s.accChart, s.a, 2, "g", color, []);
+  }
+  drawBars();
+  requestAnimationFrame(frame);
+}
+
+renderTables();
+connect();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

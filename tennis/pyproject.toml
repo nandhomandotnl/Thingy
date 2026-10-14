@@ -17,3 +17,6 @@ tennis-tracker = "tennis_tracker.cli:main"
 
 [tool.setuptools]
 packages = ["tennis_tracker"]
+
+[tool.setuptools.package-data]
+tennis_tracker = ["dashboard.html"]
