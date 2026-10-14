@@ -4,9 +4,12 @@
  * The Thingy:53 shows up as a regular Bluetooth mouse (HID over GATT). The BMI270 gyroscope
  * moves the cursor, the two buttons are the left and right mouse buttons.
  *
- * LED: blue blink = waiting for a computer, yellow = keep still (calibrating),
+ * LED: white flash at power-on = firmware started,
+ *      blue blink = waiting for a computer, yellow = keep still (calibrating),
  *      short green blink = active, white blinks = forward direction changed,
- *      red blinks at start-up = pairings erased.
+ *      3x red at start-up = pairings erased.
+ * Errors (blink forever, message repeated on the USB serial port):
+ *      red = motion sensor, purple = Bluetooth, cyan = other start-up error.
  */
 
 #include <errno.h>
@@ -127,6 +130,22 @@ static void leds_blink(int count, bool r, bool g, bool b)
 	}
 }
 
+/* Blink an error colour forever and keep logging why, so the cause can be read over USB
+ * even when the serial port is opened after start-up.
+ */
+static void FUNC_NORETURN fail(const char *what, int err, bool r, bool g, bool b)
+{
+	for (uint32_t i = 0;; i++) {
+		if (i % 4 == 0) {
+			LOG_ERR("FOUT: %s (err %d)", what, err);
+		}
+		leds_set(r, g, b);
+		k_msleep(250);
+		leds_set(false, false, false);
+		k_msleep(250);
+	}
+}
+
 /* ---------- Bluetooth ---------- */
 
 static void advertising_start(void)
@@ -134,7 +153,7 @@ static void advertising_start(void)
 	int err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
 
 	if (err && err != -EALREADY) {
-		LOG_ERR("Advertising failed to start (err %d)", err);
+		LOG_ERR("FOUT: advertising start niet (err %d)", err);
 		return;
 	}
 	LOG_INF("Advertising as \"%s\"", CONFIG_BT_DEVICE_NAME);
@@ -397,26 +416,31 @@ int main(void)
 		return 0;
 	}
 
+	/* White flash: the firmware is running. */
+	leds_set(true, true, true);
+	k_msleep(500);
+	leds_set(false, false, false);
+
 	err = imu_init();
 	if (err) {
-		/* Without the gyro there is nothing to do; show solid red. */
-		leds_set(true, false, false);
-		return 0;
+		fail("bewegingssensor (BMI270) start niet", err, true, false, false);
 	}
 
 	k_work_init(&adv_work, adv_work_handler);
 
 	err = hid_init();
 	if (err) {
-		LOG_ERR("HID init failed (err %d)", err);
-		return 0;
+		fail("HID-service start niet", err, false, true, true);
 	}
 
+	/* Blue while the Bluetooth core starts; stays blue if it hangs. */
+	leds_set(false, false, true);
 	err = bt_enable(NULL);
+	leds_set(false, false, false);
 	if (err) {
-		LOG_ERR("Bluetooth init failed (err %d)", err);
-		return 0;
+		fail("Bluetooth (netwerkkern) start niet", err, true, false, true);
 	}
+	LOG_INF("Bluetooth started");
 	settings_load();
 	apply_forward_step();
 
@@ -449,8 +473,11 @@ int main(void)
 		int64_t now = k_uptime_get();
 
 		if (!conn) {
-			/* Waiting for a computer: short blue blink every second. */
-			leds_set(false, false, (tick % SAMPLE_RATE_HZ) < 5);
+			/* Waiting for a computer: clear blue blink every second. */
+			leds_set(false, false, (tick % SAMPLE_RATE_HZ) < 25);
+			if (tick % (5 * SAMPLE_RATE_HZ) == 0) {
+				LOG_INF("Wacht op koppelen als \"%s\"", CONFIG_BT_DEVICE_NAME);
+			}
 			sent_buttons = 0;
 			pending_dx = pending_dy = 0;
 			continue;
