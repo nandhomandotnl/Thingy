@@ -1,0 +1,3 @@
+[submodule "firmware/edgeimpulse_thingy53"]
+	path = firmware/edgeimpulse_thingy53
+	url = https://github.com/edgeimpulse/firmware-nordic-thingy53.git

@@ -5,6 +5,9 @@ Gebruik een Nordic Thingy als "air mouse" voor je laptop.
 > **Heb je een Thingy:53?** Gebruik dan de firmware in [`firmware/thingy53`](firmware/thingy53/README.md):
 > de Thingy:53 wordt daarmee zelf een Bluetooth-muis, zonder Pi of extra software.
 >
+> **Thingy:53 met de originele Edge Impulse-firmware** uitlezen via Bluetooth (NUS) met Python:
+> zie [`edgeimpulse/`](edgeimpulse/README.md).
+>
 > **Tennisslagen analyseren** met Thingy:53's op het racket (laptop of Raspberry Pi):
 > zie [`tennis/`](tennis/README.md).
 >
